@@ -3,15 +3,13 @@ from re import search, sub
 from random import sample
 
 
+# global variables
+value_error_text: str = f"Не вірно вказаний формат! Очікуваний формат \"РРРР-ММ-ДД\""
+
 # ======================= Exercise 1 ============================================
 # ---------- Additional functions for Exercise 1 --------------------------------
-# return message in case of incorrect format
-def incorrect_format_return(variable: str) -> None:
-    return f"\"{variable}\" not following correct pattern \"YYYY-MM-DD\"!"
-
-
 # validation of the correct format of the 
-def validation_date_format(date: str) -> datetime | bool: # Used in Exercise 1
+def validation_date_format(date: str) -> str | bool: # Used in Exercise 1
     # trim space(s)
     date: str = str(date).strip()
     pattern: str = r"(\d{4})[-./](\d{1,2})[-./](\d{1,2})"
@@ -27,17 +25,17 @@ def validation_date_format(date: str) -> datetime | bool: # Used in Exercise 1
 # ------------------------------------------------------------------------------
 
 # Exercise 1
-def get_days_from_today(date: str) -> int:
+def get_days_from_today(date: str) -> int | ValueError:
     # 1.1 input in format 'YYYY-MM-DD'
     # 1.2 convert 
     validated_date: str = validation_date_format(date)
     if not validated_date:
-        return incorrect_format_return(date)
+        raise ValueError(value_error_text)
 
     try:
         converted_date: datetime = datetime.strptime(validated_date, "%Y-%m-%d")
     except: 
-        return incorrect_format_return(date)
+        raise ValueError(value_error_text)
     
     current_date: datetime = datetime.today()
     # 1.5 return number of days s integer between prompted and current date
@@ -71,7 +69,7 @@ def normalize_phone(phone_number: str) -> str:
 
     # regular expressions solution
     # exclude any non-digit character
-    result: str = sub("\D", "", phone_number)
+    result: str = sub(r"\D", "", phone_number)
 
     if not result.startswith("38"):
         return "+38" + result
@@ -85,15 +83,21 @@ def normalize_phone(phone_number: str) -> str:
 # if user BD within 7 days or less than return congratulation date
 # if not satisfied required then return False 
 def validation_of_upcoming_birthday(user_birthday_date: str) -> datetime | bool:
+    # variables
+    days_within_upcoming_bd: int = 7
     user_birthday: datetime = datetime.strptime(user_birthday_date, "%Y.%m.%d")
     current_date: datetime = datetime.today().date()
     user_birthday_this_year: datetime = user_birthday.replace(year = current_date.year).date()
 
-    if 0 <= (user_birthday_this_year - current_date).days <= 7:
+    # cover the edge case when current years is ending and user has 
+    if (user_birthday_this_year.replace(year = current_date.year + 1) - current_date).days <= days_within_upcoming_bd:
+        user_birthday_this_year = user_birthday_this_year.replace(year = current_date.year + 1)
+
+    if 0 <= (user_birthday_this_year - current_date).days <= days_within_upcoming_bd:
         # weekday [0 - Monday .. 6 = Sunday]
         weekday : int = user_birthday_this_year.weekday()
         if weekday > 4: # 
-            return user_birthday_this_year + timedelta(days = 7 - weekday)
+            return user_birthday_this_year + timedelta(days = days_within_upcoming_bd - weekday)
 
         return user_birthday_this_year
     
