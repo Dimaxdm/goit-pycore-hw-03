@@ -3,43 +3,40 @@ from re import search, sub
 from random import sample
 
 
-# global variables
-value_error_text: str = f"Не вірно вказаний формат! Очікуваний формат \"РРРР-ММ-ДД\""
+# global varialble
+CURRENT_DATE: datetime = datetime.today().date()
+DAYS_UPFRONT_OFFSET: int = 7 # in function related to Exercise 4
 
-# ======================= Exercise 1 ============================================
-# ---------- Additional functions for Exercise 1 --------------------------------
-# validation of the correct format of the 
-def validation_date_format(date: str) -> str | bool: # Used in Exercise 1
-    # trim space(s)
-    date: str = str(date).strip()
+
+# helper function to parse date for Exercises 1 and 4
+def parse_date(str_date: str, separator: str = ".") -> datetime:
+    error_message_expected_format: str = f"Очікуваний формат \"РРРР{separator}ММ{separator}ДД\""
+    # If missing parameter of the function >>> raise ValueError
+    if not str_date:
+        raise ValueError(f"Відсутній обов'язковий параметер функції! {error_message_expected_format}")
+    
+    date: str = str(str_date).strip()   # Remove spaces 
     pattern: str = r"(\d{4})[-./](\d{1,2})[-./](\d{1,2})"
     replacement: str = r"\1-\2-\3"
     match = search(pattern, date)
     
-    if match:
-        # return correct pattern "YYYY-mm-dd"
-        return sub(pattern, replacement, date)
-    else:
-        # return False in case wrong pattern
-        return False
-# ------------------------------------------------------------------------------
-
-# Exercise 1
-def get_days_from_today(date: str) -> int | ValueError:
-    # 1.1 input in format 'YYYY-MM-DD'
-    # 1.2 convert 
-    validated_date: str = validation_date_format(date)
-    if not validated_date:
-        raise ValueError(value_error_text)
-
+    # patter is not matching >>> raise ValueError
+    if not match:
+        raise ValueError(f"Не вірно зазначений параметер функції - \"{str_date}\"! {error_message_expected_format}")
+        
+        # return date of datetime object >>> "YYYY-mm-dd"
     try:
-        converted_date: datetime = datetime.strptime(validated_date, "%Y-%m-%d")
-    except: 
-        raise ValueError(value_error_text)
-    
-    current_date: datetime = datetime.today()
-    # 1.5 return number of days s integer between prompted and current date
-    return (current_date - converted_date).days
+        return datetime.strptime(
+            sub(pattern, replacement, date), 
+            "%Y-%m-%d"
+        ).date()
+    except:
+        raise ValueError(f"Не вірно зазначений параметер функції - \"{str_date}\"! {error_message_expected_format}")
+
+# ======================= Exercise 1 ============================================
+def get_days_from_today(date: str) -> int:
+    parsed_date: datetime = parse_date(date, separator = "-") # using helper function
+    return (CURRENT_DATE - parsed_date).days
 # ===============================================================================
 
 
@@ -79,40 +76,44 @@ def normalize_phone(phone_number: str) -> str:
 
 
 # ======================= Exercise 4 ============================================
-# ---------- Additional functions for Exercise 4 --------------------------------
-# if user BD within 7 days or less than return congratulation date
-# if not satisfied required then return False 
-def validation_of_upcoming_birthday(user_birthday_date: str) -> datetime | bool:
-    # variables
-    days_within_upcoming_bd: int = 7
-    user_birthday: datetime = datetime.strptime(user_birthday_date, "%Y.%m.%d")
-    current_date: datetime = datetime.today().date()
-    user_birthday_this_year: datetime = user_birthday.replace(year = current_date.year).date()
-
-    # cover the edge case when current years is ending and user has 
-    if (user_birthday_this_year.replace(year = current_date.year + 1) - current_date).days <= days_within_upcoming_bd:
-        user_birthday_this_year = user_birthday_this_year.replace(year = current_date.year + 1)
-
-    if 0 <= (user_birthday_this_year - current_date).days <= days_within_upcoming_bd:
-        # weekday [0 - Monday .. 6 = Sunday]
-        weekday : int = user_birthday_this_year.weekday()
-        if weekday > 4: # 
-            return user_birthday_this_year + timedelta(days = days_within_upcoming_bd - weekday)
-
-        return user_birthday_this_year
+def get_offset_date_if_weekend(date: str) -> str:
+    parsed_date: datetime = parse_date(date)
+    # week [0 - Monday .. 6 - Sunday] 
+    weekday : int = parsed_date.weekday()
+    if weekday > 4:
+        return datetime.strftime(parsed_date + timedelta(days = DAYS_UPFRONT_OFFSET - weekday), "%Y.%m.%d")
     
-    return False
-# ------------------------------------------------------------------------------
+    return date
+
 
 # Exercise 4
 def get_upcoming_birthdays(users: list[dict]) -> list[dict]:
+    days_in_year: int = 365 
     congratulation_list: list = []
-    
+
+    leap_year_offset: int = (
+        datetime(year = CURRENT_DATE.year, month = 12, day = 31) - 
+        datetime(year = CURRENT_DATE.year - 1, month = 12, day = 31)
+    ).days - days_in_year
+
     for user in users:
-        upcoming_birthday = validation_of_upcoming_birthday(user["birthday"])
-        if upcoming_birthday:
+        upcoming_birthday: str = f"{CURRENT_DATE.year}" + user["birthday"][4:]
+        # use the function from Exercise 1 (can handle "YYYY-mm-dd" or "YYYY.mm.dd" date formats)
+        days_difference: int = get_days_from_today(upcoming_birthday)
+        congratulation_date: str = ""
+        
+        # if days_difference is between 0 and -7 then date considered as upcomming congratulation date
+        if 0 >= days_difference >= -DAYS_UPFRONT_OFFSET:
+            congratulation_date = get_offset_date_if_weekend(upcoming_birthday)
+        
+        # if days_difference is between 358 and 365 (or 359 and 366 in a leap year) then user HB is in next 7 days of next year
+        if days_difference >= days_in_year + leap_year_offset - DAYS_UPFRONT_OFFSET:
+            congratulation_date = get_offset_date_if_weekend(f"{CURRENT_DATE.year + 1}" + user["birthday"][4:])
+        
+        # 
+        if congratulation_date != "":
             congratulation_list.append(
-                {"name" : user["name"], "congratulation_date" : upcoming_birthday.strftime("%Y.%m.%d")}
+                {"name" : user["name"], "congratulation_date" : congratulation_date}
             )
     
     return congratulation_list
