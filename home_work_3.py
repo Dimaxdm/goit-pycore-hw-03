@@ -4,7 +4,6 @@ from random import sample
 
 
 # global varialble
-CURRENT_DATE: datetime = datetime.today().date()
 DAYS_UPFRONT_OFFSET: int = 7 # in function related to Exercise 4
 
 
@@ -30,13 +29,14 @@ def parse_date(str_date: str, separator: str = ".") -> datetime:
             sub(pattern, replacement, date), 
             "%Y-%m-%d"
         ).date()
-    except:
-        raise ValueError(f"Не вірно зазначений параметер функції - \"{str_date}\"! {error_message_expected_format}")
+    except ValueError as e:
+        raise ValueError(f"Не вірно зазначений параметер функції - \"{str_date}\"! {error_message_expected_format}") from e
 
 # ======================= Exercise 1 ============================================
 def get_days_from_today(date: str) -> int:
+    current_date: datetime = datetime.today().date()
     parsed_date: datetime = parse_date(date, separator = "-") # using helper function
-    return (CURRENT_DATE - parsed_date).days
+    return (current_date - parsed_date).days
 # ===============================================================================
 
 
@@ -88,16 +88,17 @@ def get_offset_date_if_weekend(date: str) -> str:
 
 # Exercise 4
 def get_upcoming_birthdays(users: list[dict]) -> list[dict]:
+    current_date: datetime = datetime.today().date()
     days_in_year: int = 365 
     congratulation_list: list = []
 
     leap_year_offset: int = (
-        datetime(year = CURRENT_DATE.year, month = 12, day = 31) - 
-        datetime(year = CURRENT_DATE.year - 1, month = 12, day = 31)
+        datetime(year = current_date.year, month = 12, day = 31) - 
+        datetime(year = current_date.year - 1, month = 12, day = 31)
     ).days - days_in_year
 
     for user in users:
-        upcoming_birthday: str = f"{CURRENT_DATE.year}" + user["birthday"][4:]
+        upcoming_birthday: str = f"{current_date.year}" + user["birthday"][4:]
         # use the function from Exercise 1 (can handle "YYYY-mm-dd" or "YYYY.mm.dd" date formats)
         days_difference: int = get_days_from_today(upcoming_birthday)
         congratulation_date: str = ""
@@ -108,9 +109,9 @@ def get_upcoming_birthdays(users: list[dict]) -> list[dict]:
         
         # if days_difference is between 358 and 365 (or 359 and 366 in a leap year) then user HB is in next 7 days of next year
         if days_difference >= days_in_year + leap_year_offset - DAYS_UPFRONT_OFFSET:
-            congratulation_date = get_offset_date_if_weekend(f"{CURRENT_DATE.year + 1}" + user["birthday"][4:])
+            congratulation_date = get_offset_date_if_weekend(f"{current_date.year + 1}" + user["birthday"][4:])
         
-        # 
+        # append to the congratulation_list
         if congratulation_date != "":
             congratulation_list.append(
                 {"name" : user["name"], "congratulation_date" : congratulation_date}
